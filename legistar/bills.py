@@ -122,7 +122,16 @@ class LegistarBillScraper(LegistarScraper):
         div_id = 'ctl00_ContentPlaceHolder1_pageTop1'
         return self.details(detail_url, div_id)
 
-    def history(self, detail_url):
+    def history(self, detail_url: str):
+        """
+        Collect history from a piece of legislation. History includes actions like votes and committee meetings
+
+        Args:
+            detail_url (str): URL of a bill detail page.
+
+        Returns: 
+            Yields dicts with information about an action on a bill.
+        """
         detail_page = self.lxmlize(detail_url)
 
         try:
@@ -159,7 +168,18 @@ class LegistarBillScraper(LegistarScraper):
         else:
             return None
 
-    def extractVotes(self, action_detail_url):
+    def extractVotes(self, action_detail_url: str):
+        """
+        Scrape the votes from a legislative action.
+
+        Args:
+            action_detail_url (str): A url linking to to the action details for a particular vote.
+
+        Returns:
+            A tuple:
+                - the text result of the vote
+                - a list of votes as Dicts
+        """
         action_detail_page = self.lxmlize(action_detail_url)
         try:
             vote_table = action_detail_page.xpath(
@@ -171,8 +191,13 @@ class LegistarBillScraper(LegistarScraper):
         vote_list = []
         for vote, _, _ in votes:
             raw_option = vote['Vote'].lower()
+
+            # In Philly, vote['Person Name'] is the name, w/ no label.
+            person_name = vote['Person Name']
+            if isinstance(person_name, dict):
+                person_name = person_name['label']
             vote_list.append((self.VOTE_OPTIONS.get(raw_option, raw_option),
-                              vote['Person Name']['label']))
+                              person_name))
 
         action_detail_div = action_detail_page.xpath(
             ".//div[@id='ctl00_ContentPlaceHolder1_pageTop1']")[0]
